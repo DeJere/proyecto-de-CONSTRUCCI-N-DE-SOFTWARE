@@ -1,0 +1,51 @@
+services:
+  zookeeper:
+    image: zookeeper:3.5.6
+    hostname: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  pinot-controller:
+    image: apachepinot/pinot:0.12.1
+    command: StartController -zkAddress zookeeper:2181
+    ports:
+      - "9000:9000"
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    environment:
+      JAVA_OPTS: "-Xms512m -Xmx1g"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9000/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 30s
+    restart: on-failure
+
+  pinot-broker:
+    image: apachepinot/pinot:0.12.1
+    command: StartBroker -zkAddress zookeeper:2181
+    ports:
+      - "8099:8099"
+    depends_on:
+      pinot-controller:
+        condition: service_healthy
+    restart: on-failure
+
+  pinot-server:
+    image: apachepinot/pinot:0.12.1
+    command: StartServer -zkAddress zookeeper:2181
+    ports:
+      - "8098:8098"
+    depends_on:
+      pinot-controller:
+        condition: service_healthy
+    restart: on-failure

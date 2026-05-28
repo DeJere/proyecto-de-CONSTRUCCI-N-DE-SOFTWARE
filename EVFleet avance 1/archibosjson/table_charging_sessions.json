@@ -1,0 +1,18 @@
+{
+  "tableName": "fact_charging_sessions",
+  "tableType": "OFFLINE",
+  "segmentsConfig": {
+    "schemaName": "fact_charging_sessions",
+    "timeColumnName": "start_time",
+    "timeType": "MILLISECONDS",
+    "replication": "1",
+    "retentionTimeUnit": "DAYS",
+    "retentionTimeValue": "365"
+  },
+  "tableIndexConfig": {
+    "loadMode": "MMAP",
+    "invertedIndexColumns": ["vehicle_id", "station_id", "customer_id", "session_status"]
+  },
+  "tenants": {},
+  "metadata": {}
+}
