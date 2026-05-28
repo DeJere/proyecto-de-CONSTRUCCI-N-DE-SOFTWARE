@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+requests
+pinotdb
+python-dotenv
+pocketbase
+psycopg2-binary
+httpx
+jinja2
