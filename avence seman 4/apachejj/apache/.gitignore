@@ -1,0 +1,13 @@
+venv/
+__pycache__/
+*.pyc
+.env
+
+downloads/
+*.log
+*.tar.gz
+
+.idea/
+.vscode/
+
+node_modules/

@@ -1,0 +1,16 @@
+{
+  "schemaName": "fact_charging_sessions",
+  "dimensionFieldSpecs": [
+    {"name": "session_id",     "dataType": "INT"},
+    {"name": "vehicle_id",     "dataType": "INT"},
+    {"name": "station_id",     "dataType": "INT"},
+    {"name": "customer_id",    "dataType": "INT"},
+    {"name": "session_status", "dataType": "STRING"}
+  ],
+  "metricFieldSpecs": [
+    {"name": "kwh_delivered", "dataType": "DOUBLE"},
+    {"name": "total_cost",    "dataType": "DOUBLE"},
+    {"name": "start_time",    "dataType": "LONG"},
+    {"name": "end_time",      "dataType": "LONG"}
+  ]
+}

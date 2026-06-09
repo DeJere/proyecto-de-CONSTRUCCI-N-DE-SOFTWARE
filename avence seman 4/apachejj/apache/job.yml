@@ -1,0 +1,28 @@
+
+executionFrameworkSpec:
+  name: standalone
+
+jobType: SegmentCreationAndMetadataPush
+
+inputDirURI: file:///tmp/data
+includeFileNamePattern: 'glob:**/*.parquet'
+
+outputDirURI: file:///tmp/out
+
+overwriteOutput: true
+
+pinotFSSpecs:
+- scheme: file
+  className: org.apache.pinot.spi.filesystem.LocalPinotFS
+
+recordReaderSpec:
+  dataFormat: parquet
+
+tableSpec:
+  tableName: dim_manufacturers
+
+segmentNameGeneratorSpec:
+  type: normalizedDate
+
+pinotClusterSpecs:
+- controllerURI: http://localhost:9000

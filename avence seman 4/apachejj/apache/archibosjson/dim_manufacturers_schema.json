@@ -1,0 +1,1 @@
+{"schemaName": "dim_manufacturers", "dimensionFieldSpecs": [{"name": "manufacturer_id", "dataType": "INT"}, {"name": "name", "dataType": "STRING"}, {"name": "country", "dataType": "STRING"}, {"name": "manufacturer_type", "dataType": "STRING"}, {"name": "active", "dataType": "BOOLEAN"}], "metricFieldSpecs": [{"name": "created_at", "dataType": "LONG"}]}
