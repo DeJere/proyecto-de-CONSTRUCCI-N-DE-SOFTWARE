@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EVFleet Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <!-- Navbar -->
+  <nav class="bg-blue-700 p-4 text-white shadow-lg">
+    <div class="container mx-auto flex justify-between items-center flex-wrap gap-3">
+      <h1 class="text-2xl font-bold">⚡ EVFleet Management</h1>
+      <div class="flex gap-3 flex-wrap">
+        <a href="/" class="bg-blue-900 px-4 py-1 rounded-full text-sm font-semibold">Dashboard</a>
+        <a href="/catalog" class="bg-blue-600 hover:bg-blue-500 px-4 py-1 rounded-full text-sm">Catálogo</a>
+        <a href="/stations" class="bg-blue-600 hover:bg-blue-500 px-4 py-1 rounded-full text-sm">Estaciones</a>
+        <a href="/admin/products" class="bg-blue-600 hover:bg-blue-500 px-4 py-1 rounded-full text-sm">Productos</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto p-6">
+
+    <!-- KPIs -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div class="bg-white p-6 rounded-xl shadow border-l-4 border-green-500">
+        <h3 class="text-gray-500 text-xs font-semibold uppercase tracking-widest">CO2 Total Ahorrado</h3>
+        <p id="kpi-co2" class="text-4xl font-bold text-gray-800 mt-1">—</p>
+        <p class="text-xs text-gray-400 mt-1">kg evitados · fact_emissions_reports</p>
+      </div>
+      <div class="bg-white p-6 rounded-xl shadow border-l-4 border-blue-500">
+        <h3 class="text-gray-500 text-xs font-semibold uppercase tracking-widest">Vehículos Monitoreados</h3>
+        <p id="kpi-vehiculos" class="text-4xl font-bold text-gray-800 mt-1">—</p>
+        <p class="text-xs text-gray-400 mt-1">unidades · COUNT DISTINCT vehicle_id</p>
+      </div>
+      <div class="bg-white p-6 rounded-xl shadow border-l-4 border-yellow-500">
+        <h3 class="text-gray-500 text-xs font-semibold uppercase tracking-widest">Km Promedio Recorrido</h3>
+        <p id="kpi-km" class="text-4xl font-bold text-gray-800 mt-1">—</p>
+        <p class="text-xs text-gray-400 mt-1">km · AVG(km_driven)</p>
+      </div>
+    </div>
+
+    <!-- Fila 2: Gráfica estaciones + Gráfica marcas -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div class="bg-white p-6 rounded-xl shadow">
+        <h2 class="text-lg font-semibold mb-1 text-gray-700">⚡ Consumo por Estación (kWh)</h2>
+        <p class="text-xs text-gray-400 mb-4">Top 5 estaciones · fact_charging_sessions</p>
+        <canvas id="chartCharging" height="200"></canvas>
+      </div>
+      <div class="bg-white p-6 rounded-xl shadow">
+        <h2 class="text-lg font-semibold mb-1 text-gray-700">🚗 Top 10 Marcas de la Flota</h2>
+        <p class="text-xs text-gray-400 mb-4">Ranking por cantidad · dim_electric_vehicles</p>
+        <canvas id="chartMarcas" height="200"></canvas>
+      </div>
+    </div>
+
+    <!-- Fila 3: Tabla vehículos + Stats rápidos -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow">
+        <h2 class="text-lg font-semibold mb-1 text-gray-700">Flota — Muestra en tiempo real</h2>
+        <p class="text-xs text-gray-400 mb-4">10 vehículos · dim_electric_vehicles · Apache Pinot</p>
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead>
+              <tr class="bg-gray-50 text-xs font-semibold text-gray-500 uppercase">
+                <th class="px-3 py-2">Marca</th>
+                <th class="px-3 py-2">Modelo</th>
+                <th class="px-3 py-2 text-center">Año</th>
+                <th class="px-3 py-2">Ciudad</th>
+                <th class="px-3 py-2 text-center">Tipo</th>
+              </tr>
+            </thead>
+            <tbody id="vehicle-table" class="text-gray-700"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Panel de accesos rápidos -->
+      <div class="bg-white p-6 rounded-xl shadow flex flex-col gap-4">
+        <h2 class="text-lg font-semibold text-gray-700">Accesos rápidos</h2>
+        <a href="/catalog" class="flex items-center gap-3 p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition">
+          <span class="text-2xl">📋</span>
+          <div>
+            <p class="font-semibold text-blue-700">Catálogo</p>
+            <p class="text-xs text-gray-500">280k+ vehículos con filtros</p>
+          </div>
+        </a>
+        <a href="/stations" class="flex items-center gap-3 p-4 bg-green-50 rounded-lg hover:bg-green-100 transition">
+          <span class="text-2xl">🔌</span>
+          <div>
+            <p class="font-semibold text-green-700">Estaciones</p>
+            <p class="text-xs text-gray-500">Sesiones de carga y kWh</p>
+          </div>
+        </a>
+        <a href="/admin/products" class="flex items-center gap-3 p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition">
+          <span class="text-2xl">🖼️</span>
+          <div>
+            <p class="font-semibold text-purple-700">Productos</p>
+            <p class="text-xs text-gray-500">Imágenes del catálogo</p>
+          </div>
+        </a>
+      </div>
+    </div>
+
+  </div>
+
+    <script>
+    const API = window.location.origin;
+
+    async function loadKPIs() {
+      try {
+        const res  = await fetch(`${API}/analytics/emissions-report`);
+        const data = await res.json();
+        if (data.length > 0) {
+          const s = data[0];
+          document.getElementById('kpi-co2').innerText      = Math.round(s.co2_total_ahorrado   || 0).toLocaleString() + ' kg';
+          document.getElementById('kpi-vehiculos').innerText = (s.vehiculos_monitoreados || 0).toLocaleString();
+          document.getElementById('kpi-km').innerText        = Math.round(s.km_promedio_recorrido || 0).toLocaleString() + ' km';
+        }
+      } catch(e) { console.error('KPIs:', e); }
+    }
+
+    async function loadVehicles() {
+      try {
+        const res  = await fetch(`${API}/analytics/vehicles-list`);
+        const data = await res.json();
+        const tbody = document.getElementById('vehicle-table');
+        if (!data.length) {
+          tbody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-gray-400">Sin datos en Pinot</td></tr>';
+          return;
+        }
+        tbody.innerHTML = data.map(v => `
+          <tr class="border-t hover:bg-gray-50">
+            <td class="px-3 py-2 font-semibold">${v.make || '—'}</td>
+            <td class="px-3 py-2">${v.model || '—'}</td>
+            <td class="px-3 py-2 text-center">${v.model_year || '—'}</td>
+            <td class="px-3 py-2 text-gray-500">${v.city || '—'}</td>
+            <td class="px-3 py-2 text-center">
+              <span class="px-2 py-0.5 rounded-full text-xs font-bold ${
+                (v.electric_vehicle_type||'').includes('BEV')
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'bg-purple-100 text-purple-700'
+              }">${(v.electric_vehicle_type||'').includes('BEV') ? 'BEV' : 'PHEV'}</span>
+            </td>
+          </tr>`).join('');
+      } catch(e) { console.error('Vehicles:', e); }
+    }
+
+    async function loadChartEstaciones() {
+      try {
+        const res  = await fetch(`${API}/analytics/charging-summary`);
+        const data = await res.json();
+        new Chart(document.getElementById('chartCharging'), {
+          type: 'bar',
+          data: {
+            labels: data.map(d => `Est. ${d.station_id}`),
+            datasets: [{ label: 'kWh entregados', data: data.map(d => d.energia_total_kwh),
+              backgroundColor: 'rgba(59,130,246,0.6)', borderColor: 'rgba(59,130,246,1)', borderWidth:1 }]
+          },
+          options: { responsive:true, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
+        });
+      } catch(e) { console.error('Estaciones chart:', e); }
+    }
+
+    async function loadChartMarcas() {
+      try {
+        const res  = await fetch(`${API}/analytics/vehicles`);
+        const data = await res.json();
+        new Chart(document.getElementById('chartMarcas'), {
+          type: 'bar',
+          data: {
+            labels: data.map(d => d.make),
+            datasets: [{ label: 'Vehículos', data: data.map(d => d.total),
+              backgroundColor: 'rgba(16,185,129,0.6)', borderColor: 'rgba(16,185,129,1)', borderWidth:1 }]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive:true,
+            plugins:{legend:{display:false}},
+            scales:{x:{beginAtZero:true}}
+          }
+        });
+      } catch(e) { console.error('Marcas chart:', e); }
+    }
+
+    window.onload = () => {
+      loadKPIs();
+      loadVehicles();
+      loadChartEstaciones();
+      loadChartMarcas();
+    };
+    </script>
+</body>
+</html>

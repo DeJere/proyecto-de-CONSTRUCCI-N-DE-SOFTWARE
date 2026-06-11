@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EVFleet — Estaciones de Carga</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+
+  <!-- Navbar -->
+  <nav class="bg-blue-700 p-4 text-white shadow-lg">
+    <div class="container mx-auto flex justify-between items-center flex-wrap gap-3">
+      <h1 class="text-2xl font-bold">⚡ EVFleet Management</h1>
+      <div class="flex gap-3 flex-wrap">
+        <a href="/" class="bg-blue-600 hover:bg-blue-500 px-4 py-1 rounded-full text-sm">Dashboard</a>
+        <a href="/catalog" class="bg-blue-600 hover:bg-blue-500 px-4 py-1 rounded-full text-sm">Catálogo</a>
+        <a href="/stations" class="bg-blue-900 px-4 py-1 rounded-full text-sm font-semibold">Estaciones</a>
+        <a href="/admin/products" class="bg-blue-600 hover:bg-blue-500 px-4 py-1 rounded-full text-sm">Productos</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto p-6">
+
+    <div class="mb-6">
+      <h2 class="text-2xl font-bold text-gray-800">🔌 Estaciones de Carga</h2>
+      <p class="text-gray-500 text-sm mt-1">Análisis de uso energético · Fuente: fact_charging_sessions · Apache Pinot</p>
+    </div>
+
+    <!-- KPIs estaciones -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div class="bg-white p-6 rounded-xl shadow border-l-4 border-green-500">
+        <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-widest">Total kWh Entregados</h3>
+        <p id="kpi-kwh" class="text-4xl font-bold text-gray-800 mt-1">—</p>
+        <p class="text-xs text-gray-400 mt-1">suma de todas las estaciones</p>
+      </div>
+      <div class="bg-white p-6 rounded-xl shadow border-l-4 border-blue-500">
+        <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-widest">Estaciones Activas</h3>
+        <p id="kpi-stations" class="text-4xl font-bold text-gray-800 mt-1">—</p>
+        <p class="text-xs text-gray-400 mt-1">con sesiones registradas</p>
+      </div>
+      <div class="bg-white p-6 rounded-xl shadow border-l-4 border-yellow-500">
+        <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-widest">Promedio kWh / Estación</h3>
+        <p id="kpi-avg" class="text-4xl font-bold text-gray-800 mt-1">—</p>
+        <p class="text-xs text-gray-400 mt-1">energía promedio entregada</p>
+      </div>
+    </div>
+
+    <!-- Gráfica + Tabla -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div class="bg-white p-6 rounded-xl shadow">
+        <h3 class="text-lg font-semibold text-gray-700 mb-1">Energía por estación (kWh)</h3>
+        <p class="text-xs text-gray-400 mb-4">Top 5 · GROUP BY station_id ORDER BY kWh DESC</p>
+        <canvas id="chartKwh" height="220"></canvas>
+      </div>
+      <div class="bg-white p-6 rounded-xl shadow">
+        <h3 class="text-lg font-semibold text-gray-700 mb-1">Costo promedio por estación</h3>
+        <p class="text-xs text-gray-400 mb-4">AVG(charging_cost) · fact_charging_sessions</p>
+        <canvas id="chartCosto" height="220"></canvas>
+      </div>
+    </div>
+
+    <!-- Tabla detallada -->
+    <div class="bg-white rounded-xl shadow p-6">
+      <h3 class="text-lg font-semibold text-gray-700 mb-4">Detalle por estación</h3>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead>
+            <tr class="bg-gray-50 text-xs font-semibold text-gray-500 uppercase">
+              <th class="px-4 py-3 text-left">ID Estación</th>
+              <th class="px-4 py-3 text-right">kWh Entregados</th>
+              <th class="px-4 py-3 text-right">Costo Promedio</th>
+              <th class="px-4 py-3 text-right">Sesiones</th>
+              <th class="px-4 py-3 text-left">Uso relativo</th>
+            </tr>
+          </thead>
+          <tbody id="stations-table" class="text-gray-700 divide-y divide-gray-100"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const API = window.location.origin;
+
+    async function loadStations() {
+      try {
+        const [summaryRes, detailRes] = await Promise.all([
+          fetch(`${API}/analytics/charging-summary`),
+          fetch(`${API}/analytics/charging-detail`)
+        ]);
+        const summary = await summaryRes.json();
+        const detail  = await detailRes.json();
+
+        // KPIs
+        const totalKwh = summary.reduce((a,d) => a + (d.energia_total_kwh||0), 0);
+        document.getElementById('kpi-kwh').innerText      = Math.round(totalKwh).toLocaleString() + ' kWh';
+        document.getElementById('kpi-stations').innerText = summary.length;
+        document.getElementById('kpi-avg').innerText      = summary.length
+          ? Math.round(totalKwh / summary.length).toLocaleString() + ' kWh'
+          : '—';
+
+        // Gráfica kWh
+        new Chart(document.getElementById('chartKwh'), {
+          type: 'bar',
+          data: {
+            labels: summary.map(d => `Est. ${d.station_id}`),
+            datasets: [{ label:'kWh', data: summary.map(d => d.energia_total_kwh),
+              backgroundColor:'rgba(16,185,129,0.6)', borderColor:'rgba(16,185,129,1)', borderWidth:1 }]
+          },
+          options: { responsive:true, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
+        });
+
+        // Gráfica costo
+        new Chart(document.getElementById('chartCosto'), {
+          type: 'bar',
+          data: {
+            labels: detail.map(d => `Est. ${d.station_id}`),
+            datasets: [{ label:'Costo USD', data: detail.map(d => d.costo_promedio),
+              backgroundColor:'rgba(245,158,11,0.6)', borderColor:'rgba(245,158,11,1)', borderWidth:1 }]
+          },
+          options: { responsive:true, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
+        });
+
+        // Tabla
+        const maxKwh = Math.max(...summary.map(d => d.energia_total_kwh || 0));
+        const detailMap = {};
+        detail.forEach(d => detailMap[d.station_id] = d);
+
+        document.getElementById('stations-table').innerHTML = summary.map(d => {
+          const pct = maxKwh > 0 ? Math.round((d.energia_total_kwh / maxKwh) * 100) : 0;
+          const costo = detailMap[d.station_id]?.costo_promedio ?? '—';
+          const sesiones = detailMap[d.station_id]?.total_sesiones ?? '—';
+          return `
+            <tr class="hover:bg-gray-50">
+              <td class="px-4 py-3 font-mono font-semibold text-blue-700">${d.station_id}</td>
+              <td class="px-4 py-3 text-right font-bold">${(d.energia_total_kwh||0).toLocaleString()} kWh</td>
+              <td class="px-4 py-3 text-right text-yellow-600">$${typeof costo === 'number' ? costo.toFixed(2) : costo}</td>
+              <td class="px-4 py-3 text-right text-gray-500">${sesiones}</td>
+              <td class="px-4 py-3">
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                  <div class="bg-green-500 h-2 rounded-full" style="width:${pct}%"></div>
+                </div>
+                <span class="text-xs text-gray-400">${pct}%</span>
+              </td>
+            </tr>`;
+        }).join('');
+
+      } catch(e) { console.error('Stations:', e); }
+    }
+
+    window.onload = loadStations;
+  </script>
+</body>
+</html>

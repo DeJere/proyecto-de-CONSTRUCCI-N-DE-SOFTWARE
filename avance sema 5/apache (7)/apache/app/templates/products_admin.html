@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EVFleet — Administrar Productos</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+
+  <!-- Navbar -->
+  <nav class="bg-blue-700 p-4 text-white shadow-lg">
+    <div class="container mx-auto flex justify-between items-center flex-wrap gap-3">
+      <h1 class="text-2xl font-bold">⚡ EVFleet Management</h1>
+      <div class="flex gap-3 flex-wrap">
+        <a href="/" class="bg-blue-600 hover:bg-blue-500 px-4 py-1 rounded-full text-sm">Dashboard</a>
+        <a href="/catalog" class="bg-blue-600 hover:bg-blue-500 px-4 py-1 rounded-full text-sm">Catálogo</a>
+        <a href="/stations" class="bg-blue-600 hover:bg-blue-500 px-4 py-1 rounded-full text-sm">Estaciones</a>
+        <a href="/admin/products" class="bg-blue-900 px-4 py-1 rounded-full text-sm font-semibold">Productos</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mx-auto p-6">
+
+    <div class="flex justify-between items-center mb-6 flex-wrap gap-3">
+      <div>
+        <h2 class="text-2xl font-bold text-gray-800">🖼️ Gestión de Productos</h2>
+        <p class="text-gray-500 text-sm mt-1">Imágenes por marca · Fuente: PocketBase</p>
+      </div>
+      <button onclick="openModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-semibold text-sm">
+        + Nuevo Producto
+      </button>
+    </div>
+
+    <!-- Contador -->
+    <div class="bg-white rounded-xl shadow p-4 mb-6 flex items-center gap-4">
+      <span class="text-3xl">📦</span>
+      <div>
+        <p id="total-products" class="text-2xl font-bold text-gray-800">—</p>
+        <p class="text-xs text-gray-500">productos registrados en PocketBase</p>
+      </div>
+    </div>
+
+    <!-- Grid de productos -->
+    <div id="products-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5"></div>
+
+    <!-- Estado vacío -->
+    <div id="empty-state" class="hidden text-center py-16 text-gray-400">
+      <p class="text-5xl mb-4">📭</p>
+      <p class="text-lg font-semibold">No hay productos registrados</p>
+      <p class="text-sm">Usa el botón "Nuevo Producto" para agregar imágenes al catálogo</p>
+    </div>
+
+  </div>
+
+  <!-- Modal: Nuevo Producto -->
+  <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+      <h3 class="text-xl font-bold text-gray-800 mb-4">Nuevo Producto</h3>
+      <div class="flex flex-col gap-4">
+        <div>
+          <label class="text-xs font-semibold text-gray-500 uppercase">Nombre (usar la marca exacta, ej: Tesla)</label>
+          <input id="input-name" type="text" placeholder="Tesla"
+            class="mt-1 w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-gray-500 uppercase">Descripción</label>
+          <input id="input-desc" type="text" placeholder="Vehículos eléctricos Tesla"
+            class="mt-1 w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-gray-500 uppercase">Imagen</label>
+          <input id="input-image" type="file" accept="image/*"
+            class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+        </div>
+        <p id="modal-error" class="hidden text-red-500 text-xs"></p>
+      </div>
+      <div class="flex gap-3 mt-6">
+        <button onclick="closeModal()" class="flex-1 border border-gray-300 rounded-lg py-2 text-sm text-gray-600 hover:bg-gray-50">
+          Cancelar
+        </button>
+        <button onclick="saveProduct()" id="btn-save"
+          class="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg py-2 text-sm font-semibold">
+          Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = window.location.origin;
+
+    async function loadProducts() {
+      try {
+        const res  = await fetch(`${API}/products/`);
+        const data = await res.json();
+        document.getElementById('total-products').innerText = data.length + ' productos';
+        const grid = document.getElementById('products-grid');
+
+        if (!data.length) {
+          grid.innerHTML = '';
+          document.getElementById('empty-state').classList.remove('hidden');
+          return;
+        }
+        document.getElementById('empty-state').classList.add('hidden');
+
+        grid.innerHTML = data.map(p => `
+          <div class="bg-white rounded-xl shadow overflow-hidden hover:shadow-md transition">
+            ${p.image_url
+              ? `<img src="${p.image_url}" alt="${p.name}"
+                   class="w-full h-40 object-cover"
+                   onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23f3f4f6%22 width=%22100%22 height=%22100%22/><text y=%2250%22 x=%2250%22 font-size=%2240%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22>🚗</text></svg>'">`
+              : `<div class="w-full h-40 bg-gray-100 flex items-center justify-center text-5xl">🚗</div>`
+            }
+            <div class="p-3">
+              <p class="font-bold text-gray-800 truncate">${p.name || 'Sin nombre'}</p>
+              <p class="text-xs text-gray-400 truncate mt-1">${p.description || '—'}</p>
+              <p class="text-xs text-gray-300 mt-2 font-mono">${p.id}</p>
+            </div>
+          </div>`).join('');
+      } catch(e) {
+        console.error('Products:', e);
+        document.getElementById('products-grid').innerHTML =
+          '<p class="text-red-500 text-sm col-span-4">Error cargando productos desde PocketBase</p>';
+      }
+    }
+
+    function openModal()  { document.getElementById('modal').classList.remove('hidden'); }
+    function closeModal() {
+      document.getElementById('modal').classList.add('hidden');
+      document.getElementById('input-name').value  = '';
+      document.getElementById('input-desc').value  = '';
+      document.getElementById('input-image').value = '';
+      document.getElementById('modal-error').classList.add('hidden');
+    }
+
+    async function saveProduct() {
+      const name  = document.getElementById('input-name').value.trim();
+      const desc  = document.getElementById('input-desc').value.trim();
+      const file  = document.getElementById('input-image').files[0];
+      const errEl = document.getElementById('modal-error');
+      const btn   = document.getElementById('btn-save');
+
+      if (!name) { errEl.textContent = 'El nombre es obligatorio'; errEl.classList.remove('hidden'); return; }
+
+      btn.textContent = 'Guardando...';
+      btn.disabled = true;
+
+      try {
+        const form = new FormData();
+        form.append('name', name);
+        if (desc)  form.append('description', desc);
+        if (file)  form.append('image', file);
+
+        const res = await fetch(`${API}/admin/products`, { method:'POST', body: form });
+        if (!res.ok) throw new Error(await res.text());
+
+        closeModal();
+        await loadProducts();
+      } catch(e) {
+        errEl.textContent = 'Error: ' + e.message;
+        errEl.classList.remove('hidden');
+      } finally {
+        btn.textContent = 'Guardar';
+        btn.disabled = false;
+      }
+    }
+
+    window.onload = loadProducts;
+  </script>
+</body>
+</html>
